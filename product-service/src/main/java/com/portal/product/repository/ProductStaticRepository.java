@@ -8,12 +8,31 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Product Static Repository - In-memory data store for Product entities.
+ * <p>
+ * Uses a {@link ConcurrentHashMap} to simulate a database with pre-loaded static product data.
+ * Supports CRUD operations and filtering by category or availability status.
+ * Intended for development, testing, and demo purposes without requiring a real database.
+ * </p>
+ *
+ * @author Portal Team
+ * @version 1.0.0-SNAPSHOT
+ * @since 2026-03-21
+ */
 @Repository
 public class ProductStaticRepository {
 
+    /** Thread-safe in-memory store mapping product IDs to Product objects. */
     private final Map<Long, Product> productStore = new ConcurrentHashMap<>();
+
+    /** Atomic counter for generating unique IDs for new products. */
     private final AtomicLong idGenerator = new AtomicLong(100);
 
+    /**
+     * Initializes the repository with pre-loaded sample product data.
+     * Called automatically after bean construction by the Spring container.
+     */
     @PostConstruct
     public void init() {
         productStore.put(1L, new Product(1L, "MacBook Pro 16\"", "Apple M3 Pro chip, 18GB RAM, 512GB SSD", "Electronics", 2499.99, 50, "https://via.placeholder.com/150?text=MacBook", "AVAILABLE"));
@@ -28,14 +47,31 @@ public class ProductStaticRepository {
         productStore.put(10L, new Product(10L, "PlayStation 5", "Digital Edition, 825GB SSD", "Gaming", 449.99, 0, "https://via.placeholder.com/150?text=PS5", "OUT_OF_STOCK"));
     }
 
+    /**
+     * Retrieves all products from the in-memory store.
+     *
+     * @return a list of all {@link Product} objects
+     */
     public List<Product> findAll() {
         return new ArrayList<>(productStore.values());
     }
 
+    /**
+     * Finds a product by its unique identifier.
+     *
+     * @param id the product ID to look up
+     * @return an {@link Optional} containing the product if found, or empty otherwise
+     */
     public Optional<Product> findById(Long id) {
         return Optional.ofNullable(productStore.get(id));
     }
 
+    /**
+     * Saves a product to the store. If the product has no ID, a new one is auto-generated.
+     *
+     * @param product the product to save
+     * @return the saved product with its ID set
+     */
     public Product save(Product product) {
         if (product.getId() == null) {
             product.setId(idGenerator.incrementAndGet());
@@ -44,16 +80,34 @@ public class ProductStaticRepository {
         return product;
     }
 
+    /**
+     * Deletes a product by its unique identifier.
+     *
+     * @param id the product ID to delete
+     * @return {@code true} if the product was found and removed, {@code false} otherwise
+     */
     public boolean deleteById(Long id) {
         return productStore.remove(id) != null;
     }
 
+    /**
+     * Finds all products belonging to a specific category (case-insensitive).
+     *
+     * @param category the category name to filter by
+     * @return a list of products in the specified category
+     */
     public List<Product> findByCategory(String category) {
         return productStore.values().stream()
                 .filter(p -> p.getCategory().equalsIgnoreCase(category))
                 .toList();
     }
 
+    /**
+     * Finds all products with a specific availability status (case-insensitive).
+     *
+     * @param status the status to filter by (e.g., AVAILABLE, OUT_OF_STOCK)
+     * @return a list of products with the specified status
+     */
     public List<Product> findByStatus(String status) {
         return productStore.values().stream()
                 .filter(p -> p.getStatus().equalsIgnoreCase(status))

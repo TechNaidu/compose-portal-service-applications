@@ -10,12 +10,31 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Order Static Repository - In-memory data store for Order entities.
+ * <p>
+ * Uses a {@link ConcurrentHashMap} to simulate a database with pre-loaded static order data.
+ * Supports CRUD operations, filtering by order status, and lookup by user ID.
+ * Intended for development, testing, and demo purposes without requiring a real database.
+ * </p>
+ *
+ * @author Portal Team
+ * @version 1.0.0-SNAPSHOT
+ * @since 2026-03-21
+ */
 @Repository
 public class OrderStaticRepository {
 
+    /** Thread-safe in-memory store mapping order IDs to Order objects. */
     private final Map<Long, Order> orderStore = new ConcurrentHashMap<>();
+
+    /** Atomic counter for generating unique IDs for new orders. */
     private final AtomicLong idGenerator = new AtomicLong(100);
 
+    /**
+     * Initializes the repository with pre-loaded sample order data.
+     * Called automatically after bean construction by the Spring container.
+     */
     @PostConstruct
     public void init() {
         orderStore.put(1L, new Order(1L, "ORD-2026-001", 1L, "John Doe",
@@ -65,14 +84,32 @@ public class OrderStaticRepository {
                 LocalDateTime.of(2026, 3, 20, 15, 0)));
     }
 
+    /**
+     * Retrieves all orders from the in-memory store.
+     *
+     * @return a list of all {@link Order} objects
+     */
     public List<Order> findAll() {
         return new ArrayList<>(orderStore.values());
     }
 
+    /**
+     * Finds an order by its unique identifier.
+     *
+     * @param id the order ID to look up
+     * @return an {@link Optional} containing the order if found, or empty otherwise
+     */
     public Optional<Order> findById(Long id) {
         return Optional.ofNullable(orderStore.get(id));
     }
 
+    /**
+     * Saves an order to the store. If the order has no ID, a new one is auto-generated
+     * along with a formatted order number.
+     *
+     * @param order the order to save
+     * @return the saved order with its ID and order number set
+     */
     public Order save(Order order) {
         if (order.getId() == null) {
             order.setId(idGenerator.incrementAndGet());
@@ -82,16 +119,34 @@ public class OrderStaticRepository {
         return order;
     }
 
+    /**
+     * Deletes an order by its unique identifier.
+     *
+     * @param id the order ID to delete
+     * @return {@code true} if the order was found and removed, {@code false} otherwise
+     */
     public boolean deleteById(Long id) {
         return orderStore.remove(id) != null;
     }
 
+    /**
+     * Finds all orders with a specific fulfillment status (case-insensitive).
+     *
+     * @param status the status to filter by (e.g., PENDING, SHIPPED, DELIVERED)
+     * @return a list of orders with the specified status
+     */
     public List<Order> findByStatus(String status) {
         return orderStore.values().stream()
                 .filter(o -> o.getStatus().equalsIgnoreCase(status))
                 .toList();
     }
 
+    /**
+     * Finds all orders placed by a specific user.
+     *
+     * @param userId the user ID to look up orders for
+     * @return a list of orders belonging to the specified user
+     */
     public List<Order> findByUserId(Long userId) {
         return orderStore.values().stream()
                 .filter(o -> o.getUserId().equals(userId))

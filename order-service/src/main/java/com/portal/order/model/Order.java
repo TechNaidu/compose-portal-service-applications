@@ -3,21 +3,66 @@ package com.portal.order.model;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Order - Model class representing a customer order.
+ * <p>
+ * Contains order details including order number, customer information, line items,
+ * total amount, fulfillment status, shipping address, payment method, and order date.
+ * </p>
+ *
+ * @author Portal Team
+ * @version 1.0.0-SNAPSHOT
+ * @since 2026-03-21
+ */
 public class Order {
 
+    /** Unique identifier for the order. */
     private Long id;
+
+    /** Human-readable order number (e.g., ORD-2026-001). */
     private String orderNumber;
+
+    /** ID of the user who placed this order. */
     private Long userId;
+
+    /** Full name of the customer who placed the order. */
     private String customerName;
+
+    /** List of items included in this order. */
     private List<OrderItem> items;
+
+    /** Total monetary amount for the order in USD. */
     private Double totalAmount;
+
+    /** Current order status (PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED). */
     private String status;
+
+    /** Shipping address for order delivery. */
     private String shippingAddress;
+
+    /** Payment method used (e.g., CREDIT_CARD, DEBIT_CARD, PAYPAL). */
     private String paymentMethod;
+
+    /** Date and time when the order was placed. */
     private LocalDateTime orderDate;
 
+    /** Default no-arg constructor. */
     public Order() {}
 
+    /**
+     * Constructs a fully initialized Order instance.
+     *
+     * @param id              the unique order identifier
+     * @param orderNumber     the human-readable order number
+     * @param userId          the ID of the user who placed the order
+     * @param customerName    the customer's full name
+     * @param items           the list of order line items
+     * @param totalAmount     the total order amount in USD
+     * @param status          the current order status
+     * @param shippingAddress the shipping address
+     * @param paymentMethod   the payment method used
+     * @param orderDate       the date and time the order was placed
+     */
     public Order(Long id, String orderNumber, Long userId, String customerName, List<OrderItem> items,
                  Double totalAmount, String status, String shippingAddress, String paymentMethod, LocalDateTime orderDate) {
         this.id = id;
