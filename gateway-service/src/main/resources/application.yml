@@ -1,0 +1,31 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+# Service URLs configuration
+services:
+  user-service-url: http://localhost:8081
+  product-service-url: http://localhost:8082
+  order-service-url: http://localhost:8083
+
+info:
+  app:
+    name: Gateway Service
+    description: API Gateway and Dashboard
+    version: 1.0.0
+
