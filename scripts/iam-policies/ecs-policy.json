@@ -1,0 +1,49 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ECSDeployAllMicroservices",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:DescribeClusters",
+        "ecs:DescribeServices",
+        "ecs:DescribeTaskDefinition",
+        "ecs:DescribeTasks",
+        "ecs:ListClusters",
+        "ecs:ListServices",
+        "ecs:ListTasks",
+        "ecs:ListTaskDefinitions",
+        "ecs:RegisterTaskDefinition",
+        "ecs:UpdateService",
+        "ecs:TagResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "PassRoleToECS",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam:123456789012:role/compose-portal-ecs-task-execution-role",
+        "arn:aws:iam:123456789012:role/compose-portal-ecs-task-role"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ecs-tasks.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "DenyECSDestroy",
+      "Effect": "Deny",
+      "Action": [
+        "ecs:DeleteCluster",
+        "ecs:DeleteService",
+        "ecs:DeregisterContainerInstance",
+        "ecs:StopTask"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+

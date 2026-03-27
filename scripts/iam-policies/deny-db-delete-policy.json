@@ -1,0 +1,36 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyRDSProductionDeletion",
+      "Effect": "Deny",
+      "Action": [
+        "rds:DeleteDBInstance",
+        "rds:DeleteDBCluster",
+        "rds:DeleteDBSnapshot",
+        "rds:DeleteDBClusterSnapshot",
+        "rds:DeleteGlobalCluster",
+        "rds:ModifyDBInstance",
+        "rds:ModifyDBCluster",
+        "rds:RebootDBInstance",
+        "rds:StopDBInstance",
+        "rds:StopDBCluster"
+      ],
+      "Resource": [
+        "arn:aws:rds:us-east-1:123456789012:db:compose-portal-prod-*",
+        "arn:aws:rds:us-east-1:123456789012:cluster:compose-portal-prod-*"
+      ]
+    },
+    {
+      "Sid": "DenyDynamoDBProductionDeletion",
+      "Effect": "Deny",
+      "Action": [
+        "dynamodb:DeleteTable",
+        "dynamodb:DeleteBackup",
+        "dynamodb:DeleteItem"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:123456789012:table/compose-portal-prod-*"
+    }
+  ]
+}
+
