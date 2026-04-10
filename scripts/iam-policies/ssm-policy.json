@@ -13,9 +13,9 @@
         "ssm:AddTagsToResource"
       ],
       "Resource": [
-        "arn:aws:ssm:us-east-1:123456789012:parameter/compose-portal/prod/*",
-        "arn:aws:ssm:us-east-1:123456789012:parameter/compose-portal/staging/*",
-        "arn:aws:ssm:us-east-1:123456789012:parameter/compose-portal/*"
+        "arn:aws:ssm:us-west-2:857110241832:parameter/compose-portal/prod/*",
+        "arn:aws:ssm:us-west-2:857110241832:parameter/compose-portal/staging/*",
+        "arn:aws:ssm:us-west-2:857110241832:parameter/compose-portal/*"
       ]
     },
     {
@@ -25,8 +25,7 @@
         "ssm:DeleteParameter",
         "ssm:DeleteParameters"
       ],
-      "Resource": "arn:aws:ssm:us-east-1:123456789012:parameter/compose-portal/prod/*"
+      "Resource": "arn:aws:ssm:us-west-2:857110241832:parameter/compose-portal/prod/*"
     }
   ]
 }
-

@@ -1,0 +1,119 @@
+name: Deploy Compose Portal to ECS
+
+on:
+  push:
+    branches:
+      - main
+      - 'releases/**'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::857110241832:role/compose-portal-github-actions-deploy-role
+          aws-region: us-west-2
+
+      - name: Build with Maven
+        run: |
+          mvn -B -DskipTests clean package
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Docker images
+        env:
+          AWS_ACCOUNT_ID: 857110241832
+          AWS_REGION: us-west-2
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t compose-portal-gateway:${IMAGE_TAG} ./gateway-service/
+          docker tag compose-portal-gateway:${IMAGE_TAG} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/compose-portal-gateway:${IMAGE_TAG}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/compose-portal-gateway:${IMAGE_TAG}
+
+          docker build -t compose-portal-user:${IMAGE_TAG} ./user-service/
+          docker tag compose-portal-user:${IMAGE_TAG} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/compose-portal-user:${IMAGE_TAG}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/compose-portal-user:${IMAGE_TAG}
+
+          docker build -t compose-portal-product:${IMAGE_TAG} ./product-service/
+          docker tag compose-portal-product:${IMAGE_TAG} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/compose-portal-product:${IMAGE_TAG}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/compose-portal-product:${IMAGE_TAG}
+
+          docker build -t compose-portal-order:${IMAGE_TAG} ./order-service/
+          docker tag compose-portal-order:${IMAGE_TAG} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/compose-portal-order:${IMAGE_TAG}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/compose-portal-order:${IMAGE_TAG}
+
+      - name: Update SSM Parameters (image tag and service urls)
+        env:
+          AWS_REGION: us-west-2
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          aws ssm put-parameter --name "/compose-portal/prod/image-tag" --value "${IMAGE_TAG}" --type String --overwrite --region $AWS_REGION
+          aws ssm put-parameter --name "/compose-portal/prod/user-svc-url" --value "http://user-service:8081" --type String --overwrite --region $AWS_REGION
+          aws ssm put-parameter --name "/compose-portal/prod/product-svc-url" --value "http://product-service:8082" --type String --overwrite --region $AWS_REGION
+          aws ssm put-parameter --name "/compose-portal/prod/order-svc-url" --value "http://order-service:8083" --type String --overwrite --region $AWS_REGION
+
+      - name: Update ECS task definitions & services
+        env:
+          AWS_REGION: us-west-2
+          AWS_ACCOUNT_ID: 857110241832
+          IMAGE_TAG: ${{ github.sha }}
+          ECS_CLUSTER: compose-portal-prod-cluster
+        run: |
+          for svc in gateway user product order; do
+            TASK_NAME="compose-portal-${svc}-task"
+            REPO_NAME="compose-portal-${svc}"
+
+            TD_JSON=$(aws ecs describe-task-definition --task-definition ${TASK_NAME} --region $AWS_REGION --query 'taskDefinition')
+
+            NEW_TD=$(echo "$TD_JSON" | jq --arg IMG "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG" '.containerDefinitions[0].image = $IMG | del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy)')
+
+            NEW_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TD" --region $AWS_REGION --query 'taskDefinition.taskDefinitionArn' --output text)
+
+            SERVICE_NAME="${svc}-service"
+            aws ecs update-service --cluster $ECS_CLUSTER --service $SERVICE_NAME --task-definition $NEW_ARN --force-new-deployment --region $AWS_REGION
+          done
+
+      - name: Wait for services to stabilize
+        run: |
+          aws ecs wait services-stable --cluster compose-portal-prod-cluster --services gateway-service user-service product-service order-service --region us-west-2
+
+      - name: Run Smoke Tests
+        run: |
+          SERVICES_OK=0
+          for PORT in 8080 8081 8082 8083; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://compose-portal-alb.us-west-2.elb.amazonaws.com:$PORT/actuator/health || true)
+            if [ "$HTTP_STATUS" = "200" ]; then
+              SERVICES_OK=$((SERVICES_OK + 1))
+            fi
+          done
+          if [ $SERVICES_OK -ne 4 ]; then
+            echo "Not all services healthy: $SERVICES_OK/4"; exit 1
+          fi
+
+      - name: Post deployment success
+        if: success()
+        run: |
+          echo "Deployment successful: ${{ github.sha }}"
+
+      - name: Post deployment failure
+        if: failure()
+        run: |
+          echo "Deployment failed — check logs"

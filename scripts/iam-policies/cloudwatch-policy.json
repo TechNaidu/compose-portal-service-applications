@@ -11,8 +11,7 @@
         "logs:DescribeLogGroups",
         "logs:DescribeLogStreams"
       ],
-      "Resource": "arn:aws:logs:us-east-1:123456789012:log-group:/compose-portal/ci/*"
+      "Resource": "arn:aws:logs:us-west-2:857110241832:log-group:/compose-portal/ci/*"
     }
   ]
 }
-

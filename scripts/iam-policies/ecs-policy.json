@@ -24,8 +24,8 @@
       "Effect": "Allow",
       "Action": "iam:PassRole",
       "Resource": [
-        "arn:aws:iam:123456789012:role/compose-portal-ecs-task-execution-role",
-        "arn:aws:iam:123456789012:role/compose-portal-ecs-task-role"
+        "arn:aws:iam::857110241832:role/compose-portal-ecs-task-execution-role",
+        "arn:aws:iam::857110241832:role/compose-portal-ecs-task-role"
       ],
       "Condition": {
         "StringEquals": {
@@ -46,4 +46,3 @@
     }
   ]
 }
-

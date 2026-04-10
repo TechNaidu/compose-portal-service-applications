@@ -1,0 +1,218 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Create GitHub OIDC provider and IAM role + policies for Compose Portal CI.
+
+Parameters:
+  AccountId:
+    Type: String
+    Description: AWS account id where the role and policies will be created
+  RepoPattern:
+    Type: String
+    Default: "repo:TechNaidu/compose-portal-service-applications:ref:refs/heads/*"
+    Description: GitHub repo subject pattern allowed to assume the role (OIDC subject)
+  ExistingOIDCProviderArn:
+    Type: String
+    Default: ""
+    Description: "If you already have an OIDC provider for token.actions.githubusercontent.com, supply its ARN to avoid creating a new provider. Leave empty to create one."
+
+Conditions:
+  CreateOIDCProvider: !Equals [ !Ref ExistingOIDCProviderArn, "" ]
+
+Resources:
+  GitHubOIDCProvider:
+    Condition: CreateOIDCProvider
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
+  GitHubActionsDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: GitHubActionsDeployRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateOIDCProvider
+                - !GetAtt GitHubOIDCProvider.Arn
+                - !Ref ExistingOIDCProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+              StringLike:
+                "token.actions.githubusercontent.com:sub":
+                  - !Ref RepoPattern
+
+  ComposePortalECRPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ComposePortalECRPolicy
+      Roles:
+        - !Ref GitHubActionsDeployRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ECRLogin
+            Effect: Allow
+            Action: ecr:GetAuthorizationToken
+            Resource: "*"
+          - Sid: ECRPushPullAllMicroservices
+            Effect: Allow
+            Action:
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:PutImage
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+              - ecr:DescribeRepositories
+              - ecr:DescribeImages
+              - ecr:ListImages
+            Resource:
+              - !Sub arn:aws:ecr:${AWS::Region}:${AccountId}:repository/compose-portal-gateway
+              - !Sub arn:aws:ecr:${AWS::Region}:${AccountId}:repository/compose-portal-user
+              - !Sub arn:aws:ecr:${AWS::Region}:${AccountId}:repository/compose-portal-product
+              - !Sub arn:aws:ecr:${AWS::Region}:${AccountId}:repository/compose-portal-order
+          - Sid: DenyECRDelete
+            Effect: Deny
+            Action:
+              - ecr:DeleteRepository
+              - ecr:BatchDeleteImage
+              - ecr:DeleteLifecyclePolicy
+            Resource: "*"
+
+  ComposePortalECSPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ComposePortalECSPolicy
+      Roles:
+        - !Ref GitHubActionsDeployRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ECSDeployAllMicroservices
+            Effect: Allow
+            Action:
+              - ecs:DescribeClusters
+              - ecs:DescribeServices
+              - ecs:DescribeTaskDefinition
+              - ecs:DescribeTasks
+              - ecs:ListClusters
+              - ecs:ListServices
+              - ecs:ListTasks
+              - ecs:ListTaskDefinitions
+              - ecs:RegisterTaskDefinition
+              - ecs:UpdateService
+              - ecs:TagResource
+            Resource: "*"
+          - Sid: PassRoleToECS
+            Effect: Allow
+            Action: iam:PassRole
+            Resource:
+              - !Sub arn:aws:iam::${AccountId}:role/compose-portal-ecs-task-execution-role
+              - !Sub arn:aws:iam::${AccountId}:role/compose-portal-ecs-task-role
+            Condition:
+              StringEquals:
+                iam:PassedToService: ecs-tasks.amazonaws.com
+          - Sid: DenyECSDestroy
+            Effect: Deny
+            Action:
+              - ecs:DeleteCluster
+              - ecs:DeleteService
+              - ecs:DeregisterContainerInstance
+              - ecs:StopTask
+            Resource: "*"
+
+  ComposePortalSSMPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ComposePortalSSMPolicy
+      Roles:
+        - !Ref GitHubActionsDeployRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: SSMReadWrite
+            Effect: Allow
+            Action:
+              - ssm:PutParameter
+              - ssm:GetParameter
+              - ssm:GetParameters
+              - ssm:GetParametersByPath
+              - ssm:DescribeParameters
+              - ssm:AddTagsToResource
+            Resource:
+              - !Sub arn:aws:ssm:${AWS::Region}:${AccountId}:parameter/compose-portal/prod/*
+              - !Sub arn:aws:ssm:${AWS::Region}:${AccountId}:parameter/compose-portal/staging/*
+              - !Sub arn:aws:ssm:${AWS::Region}:${AccountId}:parameter/compose-portal/*
+          - Sid: DenySSMDeleteProd
+            Effect: Deny
+            Action:
+              - ssm:DeleteParameter
+              - ssm:DeleteParameters
+            Resource: !Sub arn:aws:ssm:${AWS::Region}:${AccountId}:parameter/compose-portal/prod/*
+
+  DenyProductionDBDeletionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: DenyProductionDBDeletion
+      Roles:
+        - !Ref GitHubActionsDeployRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyRDSProductionDeletion
+            Effect: Deny
+            Action:
+              - rds:DeleteDBInstance
+              - rds:DeleteDBCluster
+              - rds:DeleteDBSnapshot
+              - rds:DeleteDBClusterSnapshot
+              - rds:DeleteGlobalCluster
+              - rds:ModifyDBInstance
+              - rds:ModifyDBCluster
+              - rds:RebootDBInstance
+              - rds:StopDBInstance
+              - rds:StopDBCluster
+            Resource:
+              - !Sub arn:aws:rds:${AWS::Region}:${AccountId}:db:compose-portal-prod-*
+              - !Sub arn:aws:rds:${AWS::Region}:${AccountId}:cluster:compose-portal-prod-*
+          - Sid: DenyDynamoDBProductionDeletion
+            Effect: Deny
+            Action:
+              - dynamodb:DeleteTable
+              - dynamodb:DeleteBackup
+              - dynamodb:DeleteItem
+            Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AccountId}:table/compose-portal-prod-*
+
+  ComposePortalCloudWatchPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ComposePortalCloudWatchPolicy
+      Roles:
+        - !Ref GitHubActionsDeployRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: CloudWatchLogs
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - logs:DescribeLogGroups
+              - logs:DescribeLogStreams
+            Resource: !Sub arn:aws:logs:${AWS::Region}:${AccountId}:log-group:/compose-portal/ci/*
+
+Outputs:
+  RoleArn:
+    Description: ARN of the GitHub Actions deploy role
+    Value: !GetAtt GitHubActionsDeployRole.Arn

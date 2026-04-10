@@ -23,10 +23,10 @@
         "ecr:ListImages"
       ],
       "Resource": [
-        "arn:aws:ecr:us-east-1:123456789012:repository/compose-portal-gateway",
-        "arn:aws:ecr:us-east-1:123456789012:repository/compose-portal-user",
-        "arn:aws:ecr:us-east-1:123456789012:repository/compose-portal-product",
-        "arn:aws:ecr:us-east-1:123456789012:repository/compose-portal-order"
+        "arn:aws:ecr:us-west-2:857110241832:repository/compose-portal-gateway",
+        "arn:aws:ecr:us-west-2:857110241832:repository/compose-portal-user",
+        "arn:aws:ecr:us-west-2:857110241832:repository/compose-portal-product",
+        "arn:aws:ecr:us-west-2:857110241832:repository/compose-portal-order"
       ]
     },
     {
@@ -41,4 +41,3 @@
     }
   ]
 }
-

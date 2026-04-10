@@ -17,8 +17,8 @@
         "rds:StopDBCluster"
       ],
       "Resource": [
-        "arn:aws:rds:us-east-1:123456789012:db:compose-portal-prod-*",
-        "arn:aws:rds:us-east-1:123456789012:cluster:compose-portal-prod-*"
+        "arn:aws:rds:us-west-2:857110241832:db:compose-portal-prod-*",
+        "arn:aws:rds:us-west-2:857110241832:cluster:compose-portal-prod-*"
       ]
     },
     {
@@ -29,8 +29,7 @@
         "dynamodb:DeleteBackup",
         "dynamodb:DeleteItem"
       ],
-      "Resource": "arn:aws:dynamodb:us-east-1:123456789012:table/compose-portal-prod-*"
+      "Resource": "arn:aws:dynamodb:us-west-2:857110241832:table/compose-portal-prod-*"
     }
   ]
 }
-

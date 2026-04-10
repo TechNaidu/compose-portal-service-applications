@@ -28,3 +28,26 @@ Thumbs.db
 **/.mvn/timing.properties
 **/.mvn/wrapper/maven-wrapper.jar
 
+# Docker images
+**/docker/
+**/*.tar
+
+# AWS credential files
+.aws/
+
+# Logs
+logs/
+*.log
+
+# IntelliJ project files (ensure .idea removed)
+.idea/
+
+# Maven target directories (explicit)
+**/target/
+
+# Node modules if any
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db

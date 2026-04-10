@@ -163,7 +163,7 @@ Write-Host "1. 🔐 Add AWS Secrets to GitHub Repository:" -ForegroundColor Yell
 Write-Host "   - AWS_ACCESS_KEY_ID" -ForegroundColor Gray
 Write-Host "   - AWS_SECRET_ACCESS_KEY" -ForegroundColor Gray
 Write-Host "   - AWS_REGION (e.g., us-east-1)" -ForegroundColor Gray
-Write-Host "   - ECR_REGISTRY (e.g., 123456789012.dkr.ecr.us-east-1.amazonaws.com)" -ForegroundColor Gray
+Write-Host "   - ECR_REGISTRY (e.g., 857110241832.dkr.ecr.us-east-1.amazonaws.com)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "2. 🏗️ Create AWS Infrastructure:" -ForegroundColor Yellow
 Write-Host "   - ECR repositories for 4 services" -ForegroundColor Gray

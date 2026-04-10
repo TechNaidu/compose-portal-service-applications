@@ -591,3 +591,23 @@ The project is structured for easy K8s deployment:
 
 This project is for learning and demonstration purposes.
 
+## ✅ CI/CD Validation Steps
+
+Use the included verification scripts to validate the GitHub Actions -> AWS OIDC deployment flow locally or from a machine with AWS CLI configured.
+
+- Quick verify (PowerShell):
+  - Set the necessary env vars in PowerShell or provide them interactively:
+    - $env:AWS_ACCOUNT_ID = '857110241832'
+    - $env:AWS_REGION = 'us-west-2'
+    - $env:AWS_ROLE_ARN = 'arn:aws:iam::857110241832:role/compose-portal-github-actions-deploy-role'
+    - $env:COMPOSE_ALB_HOST = 'compose-portal-alb.us-west-2.elb.amazonaws.com'
+  - Run: ./scripts/verify-ci.ps1
+
+- What it checks:
+  - ECR login and list
+  - SSM put/get (test param)
+  - ECS describe services
+  - IAM simulation to ensure RDS delete is denied (requires RoleArn)
+  - ALB /actuator/health endpoints for each service
+
+If anything fails, the script prints PASS/FAIL lines. Fix IAM/policy or network issues and re-run.
